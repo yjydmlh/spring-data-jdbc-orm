@@ -11,7 +11,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class TypeSafeCriteriaBuilderTest {
+class TypeSafeCriteriaBuilderTest {
 
     private TypeSafeCriteriaBuilder<User> builder;
 
@@ -42,6 +42,7 @@ public class TypeSafeCriteriaBuilderTest {
     @Test
     void testEq() {
         TypeSafeCriteria<User> criteria = builder.eq(User::getUsername, "testuser");
+        System.out.println(criteria.toSql());
         assertEquals("username = :username", criteria.toSql());
         assertEquals("testuser", criteria.getParameters().get("username"));
     }
