@@ -41,8 +41,8 @@
 
 ```xml
 <dependency>
-    <groupId>com.example</groupId>
-    <artifactId>spring-data-jdbc-orm</artifactId>
+    <groupId>io.flexdata</groupId>
+    <artifactId>spring-data-flexorm</artifactId>
     <version>1.0.0</version>
 </dependency>
 ```
