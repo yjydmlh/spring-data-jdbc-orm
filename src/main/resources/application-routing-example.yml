@@ -1,0 +1,271 @@
+# 路由配置示例
+# 展示如何配置各种自动路由策略
+
+flexdata:
+  routing:
+    # 默认数据源
+    default-data-source: main
+    
+    # 数据源别名映射
+    aliases:
+      primary: main
+      secondary: backup
+      read: slave1
+      write: master
+    
+    # 读写分离配置
+    read-write-split:
+      enabled: true
+      master-data-source: master
+      slave-data-sources:
+        - slave1
+        - slave2
+        - slave3
+      strategy: round_robin  # round_robin, random, weight
+      weights:
+        slave1: 3
+        slave2: 2
+        slave3: 1
+    
+    # 分片配置
+    sharding:
+      # 用户表分片配置
+      user:
+        enabled: true
+        strategy: mod  # mod, range, hash, custom
+        sharding-key: userId
+        shard-count: 4
+        table-template: user_{0}
+        data-source-mapping:
+          "0": shard0
+          "1": shard1
+          "2": shard2
+          "3": shard3
+      
+      # 订单表分片配置（范围分片）
+      order:
+        enabled: true
+        strategy: range
+        sharding-key: createTime
+        ranges:
+          - start: "2023-01-01"
+            end: "2023-06-30"
+            data-source: order_h1_2023
+            table-suffix: h1_2023
+          - start: "2023-07-01"
+            end: "2023-12-31"
+            data-source: order_h2_2023
+            table-suffix: h2_2023
+          - start: "2024-01-01"
+            end: "2024-12-31"
+            data-source: order_2024
+            table-suffix: 2024
+      
+      # 日志表分片配置（自定义SpEL表达式）
+      log:
+        enabled: true
+        strategy: custom
+        sharding-key: logTime
+        custom-expression: "#{#logTime != null ? 'log_' + T(java.time.LocalDateTime).parse(#logTime.toString()).format(T(java.time.format.DateTimeFormatter).ofPattern('yyyyMM')) : 'log_default'}"
+    
+    # 多租户配置
+    multi-tenant:
+      enabled: true
+      strategy: datasource  # datasource, schema, table
+      tenant-resolver: header  # header, subdomain, parameter, custom
+      tenant-key: tenant-id
+      default-tenant: default
+      tenant-mappings:
+        tenant-a: tenant_a_db
+        tenant-b: tenant_b_db
+        tenant-c: tenant_c_db
+      # 自定义租户解析表达式
+      custom-expression: "#{headers['x-tenant-id'] ?: parameters['tenantId'] ?: 'default'}"
+    
+    # 表名映射
+    table-mappings:
+      user: t_user
+      order: t_order
+      product: t_product
+    
+    # 自定义路由规则
+    custom-rules:
+      # 规则1：VIP用户使用专用数据源
+      - name: vip-user-routing
+        condition: "#{parameters['userType'] == 'VIP'}"
+        data-source: vip_db
+        priority: 100
+        enabled: true
+      
+      # 规则2：大批量操作使用批处理数据源
+      - name: batch-operation-routing
+        condition: "#{isBatch && parameters.size() > 1000}"
+        data-source: batch_db
+        priority: 90
+        enabled: true
+      
+      # 规则3：历史数据查询路由到归档库
+      - name: archive-data-routing
+        condition: "#{parameters['startDate'] != null && T(java.time.LocalDate).parse(parameters['startDate'].toString()).isBefore(T(java.time.LocalDate).now().minusMonths(6))}"
+        data-source: archive_db
+        priority: 80
+        enabled: true
+      
+      # 规则4：特定时间段使用备用数据源
+      - name: peak-hours-routing
+        condition: "#{utils.currentHour() >= 9 && utils.currentHour() <= 18}"
+        data-source: peak_db
+        priority: 70
+        enabled: true
+      
+      # 规则5：根据地区路由
+      - name: region-based-routing
+        condition: "#{headers['x-region'] != null}"
+        data-source: "#{headers['x-region'] + '_db'}"
+        priority: 60
+        enabled: true
+      
+      # 规则6：测试环境特殊路由
+      - name: test-environment-routing
+        condition: "#{headers['x-env'] == 'test'}"
+        data-source: test_db
+        table: "#{tableName + '_test'}"
+        priority: 50
+        enabled: true
+    
+    # 负载均衡配置
+    load-balance:
+      # 查询负载均衡组
+      query-group:
+        strategy: weight  # round_robin, random, weight, least_connections
+        data-sources:
+          - query_db1
+          - query_db2
+          - query_db3
+        weights:
+          query_db1: 5
+          query_db2: 3
+          query_db3: 2
+        health-check: true
+        health-check-interval: 30000
+      
+      # 报表负载均衡组
+      report-group:
+        strategy: round_robin
+        data-sources:
+          - report_db1
+          - report_db2
+        health-check: true
+        health-check-interval: 60000
+
+# 数据源配置（示例）
+spring:
+  datasource:
+    # 主数据源
+    main:
+      jdbc-url: jdbc:mysql://localhost:3306/main_db
+      username: root
+      password: password
+      driver-class-name: com.mysql.cj.jdbc.Driver
+    
+    # 读写分离数据源
+    master:
+      jdbc-url: jdbc:mysql://master:3306/app_db
+      username: root
+      password: password
+      driver-class-name: com.mysql.cj.jdbc.Driver
+    
+    slave1:
+      jdbc-url: jdbc:mysql://slave1:3306/app_db
+      username: readonly
+      password: password
+      driver-class-name: com.mysql.cj.jdbc.Driver
+    
+    slave2:
+      jdbc-url: jdbc:mysql://slave2:3306/app_db
+      username: readonly
+      password: password
+      driver-class-name: com.mysql.cj.jdbc.Driver
+    
+    slave3:
+      jdbc-url: jdbc:mysql://slave3:3306/app_db
+      username: readonly
+      password: password
+      driver-class-name: com.mysql.cj.jdbc.Driver
+    
+    # 分片数据源
+    shard0:
+      jdbc-url: jdbc:mysql://shard0:3306/shard_db
+      username: root
+      password: password
+      driver-class-name: com.mysql.cj.jdbc.Driver
+    
+    shard1:
+      jdbc-url: jdbc:mysql://shard1:3306/shard_db
+      username: root
+      password: password
+      driver-class-name: com.mysql.cj.jdbc.Driver
+    
+    shard2:
+      jdbc-url: jdbc:mysql://shard2:3306/shard_db
+      username: root
+      password: password
+      driver-class-name: com.mysql.cj.jdbc.Driver
+    
+    shard3:
+      jdbc-url: jdbc:mysql://shard3:3306/shard_db
+      username: root
+      password: password
+      driver-class-name: com.mysql.cj.jdbc.Driver
+    
+    # 多租户数据源
+    tenant_a_db:
+      jdbc-url: jdbc:mysql://tenant-a:3306/tenant_a
+      username: tenant_a
+      password: password
+      driver-class-name: com.mysql.cj.jdbc.Driver
+    
+    tenant_b_db:
+      jdbc-url: jdbc:mysql://tenant-b:3306/tenant_b
+      username: tenant_b
+      password: password
+      driver-class-name: com.mysql.cj.jdbc.Driver
+    
+    tenant_c_db:
+      jdbc-url: jdbc:mysql://tenant-c:3306/tenant_c
+      username: tenant_c
+      password: password
+      driver-class-name: com.mysql.cj.jdbc.Driver
+    
+    # 特殊用途数据源
+    vip_db:
+      jdbc-url: jdbc:mysql://vip:3306/vip_db
+      username: vip_user
+      password: password
+      driver-class-name: com.mysql.cj.jdbc.Driver
+    
+    batch_db:
+      jdbc-url: jdbc:mysql://batch:3306/batch_db
+      username: batch_user
+      password: password
+      driver-class-name: com.mysql.cj.jdbc.Driver
+    
+    archive_db:
+      jdbc-url: jdbc:mysql://archive:3306/archive_db
+      username: archive_user
+      password: password
+      driver-class-name: com.mysql.cj.jdbc.Driver
+    
+    backup:
+      jdbc-url: jdbc:mysql://backup:3306/backup_db
+      username: backup_user
+      password: password
+      driver-class-name: com.mysql.cj.jdbc.Driver
+
+# 日志配置
+logging:
+  level:
+    io.flexdata.spring.orm.routing: DEBUG
+    org.springframework.jdbc: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%logger{50}] - %msg%n"

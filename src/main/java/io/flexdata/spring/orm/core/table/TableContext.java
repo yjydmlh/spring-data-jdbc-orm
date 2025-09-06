@@ -12,6 +12,7 @@ import java.util.Map;
 public class TableContext {
     
     private static final ThreadLocal<Map<String, String>> TABLE_MAPPINGS = new ThreadLocal<>();
+    private static final ThreadLocal<String> CURRENT_TABLE = new ThreadLocal<>();
     
     /**
      * 设置表名映射
@@ -133,6 +134,29 @@ public class TableContext {
             action.run();
             return null;
         });
+    }
+    
+    /**
+     * 设置当前表名
+     * @param tableName 表名
+     */
+    public static void setTable(String tableName) {
+        CURRENT_TABLE.set(tableName);
+    }
+    
+    /**
+     * 获取当前表名
+     * @return 当前表名
+     */
+    public static String getCurrentTable() {
+        return CURRENT_TABLE.get();
+    }
+    
+    /**
+     * 清除当前表名
+     */
+    public static void clearTable() {
+        CURRENT_TABLE.remove();
     }
     
     /**
