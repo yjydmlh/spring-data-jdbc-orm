@@ -8,9 +8,11 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.net.InetAddress;
 import java.sql.*;
 import java.time.*;
 import java.util.*;
+import java.util.regex.Pattern;
 
 /**
  * 通用行映射器，支持多种数据库的常见数据类型
@@ -123,6 +125,50 @@ public class UniversalRowMapper<T> implements RowMapper<T> {
         // 字节数组处理（BLOB）
         else if (fieldType == byte[].class) {
             return rs.getBytes(columnName);
+        }
+        
+        // MySQL特有类型处理
+        else if (fieldType == Set.class && isMySQLSetColumn(rs, columnName)) {
+            return handleMySQLSetType(rs, columnName);
+        } else if (fieldType == String.class && isMySQLBitColumn(rs, columnName)) {
+            return handleMySQLBitType(rs, columnName);
+        }
+        
+        // PostgreSQL特有类型处理
+        else if (fieldType == InetAddress.class) {
+            return handleInetType(rs, columnName);
+        } else if (fieldType == Map.class && isHstoreColumn(rs, columnName)) {
+            return handleHstoreType(rs, columnName);
+        }
+        
+        // PostgreSQL几何类型处理
+        else if (isGeometricType(fieldType)) {
+            return handleGeometricType(rs, columnName, fieldType);
+        }
+        
+        // PostgreSQL范围类型处理
+        else if (isRangeType(fieldType)) {
+            return handleRangeType(rs, columnName, fieldType);
+        }
+        
+        // PostgreSQL全文搜索类型处理
+        else if (isTextSearchType(fieldType)) {
+            return handleTextSearchType(rs, columnName, fieldType);
+        }
+        
+        // PostgreSQL网络类型处理
+        else if (isNetworkType(fieldType)) {
+            return handleNetworkType(rs, columnName, fieldType);
+        }
+        
+        // PostgreSQL位串类型处理
+        else if (isBitStringType(fieldType)) {
+            return handleBitStringType(rs, columnName, fieldType);
+        }
+        
+        // PostgreSQL XML类型处理
+        else if (isXmlType(fieldType)) {
+            return handleXmlType(rs, columnName);
         }
         
         // 默认处理
@@ -262,8 +308,253 @@ public class UniversalRowMapper<T> implements RowMapper<T> {
     }
     
     /**
+     * 处理PostgreSQL INET类型
+     */
+    private InetAddress handleInetType(ResultSet rs, String columnName) throws SQLException {
+        String inetString = rs.getString(columnName);
+        if (inetString == null) {
+            return null;
+        }
+        try {
+            // 移除CIDR后缀（如果存在）
+            String address = inetString.split("/")[0];
+            return InetAddress.getByName(address);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+    
+    /**
+     * 处理PostgreSQL HSTORE类型
+     */
+    private Map<String, String> handleHstoreType(ResultSet rs, String columnName) throws SQLException {
+        String hstoreString = rs.getString(columnName);
+        if (hstoreString == null || hstoreString.trim().isEmpty()) {
+            return new HashMap<>();
+        }
+        
+        Map<String, String> result = new HashMap<>();
+        // 简单的hstore解析（实际生产环境建议使用专门的hstore解析库）
+        String[] pairs = hstoreString.split(",\\s*");
+        for (String pair : pairs) {
+            String[] keyValue = pair.split("=>");
+            if (keyValue.length == 2) {
+                String key = keyValue[0].trim().replaceAll("^\"|\"$", "");
+                String value = keyValue[1].trim().replaceAll("^\"|\"$", "");
+                result.put(key, value);
+            }
+        }
+        return result;
+    }
+    
+    /**
+     * 处理PostgreSQL几何类型
+     */
+    private Object handleGeometricType(ResultSet rs, String columnName, Class<?> fieldType) throws SQLException {
+        String geometricString = rs.getString(columnName);
+        if (geometricString == null) {
+            return null;
+        }
+        
+        // 返回几何类型的字符串表示，实际应用中可以创建专门的几何类型类
+        if (fieldType == String.class) {
+            return geometricString;
+        }
+        
+        // 对于Point类型，可以解析为坐标数组
+        if (geometricString.startsWith("(") && geometricString.endsWith(")")) {
+            String coords = geometricString.substring(1, geometricString.length() - 1);
+            String[] parts = coords.split(",");
+            if (parts.length == 2 && fieldType == double[].class) {
+                try {
+                    return new double[]{Double.parseDouble(parts[0]), Double.parseDouble(parts[1])};
+                } catch (NumberFormatException e) {
+                    return geometricString;
+                }
+            }
+        }
+        
+        return geometricString;
+    }
+    
+    /**
+     * 处理PostgreSQL范围类型
+     */
+    private Object handleRangeType(ResultSet rs, String columnName, Class<?> fieldType) throws SQLException {
+        String rangeString = rs.getString(columnName);
+        if (rangeString == null) {
+            return null;
+        }
+        
+        // 返回范围类型的字符串表示
+        return rangeString;
+    }
+    
+    /**
+     * 处理PostgreSQL全文搜索类型（tsvector, tsquery）
+     */
+    private Object handleTextSearchType(ResultSet rs, String columnName, Class<?> fieldType) throws SQLException {
+        return rs.getString(columnName);
+    }
+    
+    /**
+     * 处理PostgreSQL网络类型（cidr, macaddr等）
+     */
+    private Object handleNetworkType(ResultSet rs, String columnName, Class<?> fieldType) throws SQLException {
+        return rs.getString(columnName);
+    }
+    
+    /**
+     * 处理PostgreSQL位串类型
+     */
+    private Object handleBitStringType(ResultSet rs, String columnName, Class<?> fieldType) throws SQLException {
+        return rs.getString(columnName);
+    }
+    
+    /**
+     * 处理PostgreSQL XML类型
+     */
+    private String handleXmlType(ResultSet rs, String columnName) throws SQLException {
+        return rs.getString(columnName);
+    }
+    
+    /**
+     * 检查是否为hstore列
+     */
+    private boolean isHstoreColumn(ResultSet rs, String columnName) {
+        try {
+            ResultSetMetaData metaData = rs.getMetaData();
+            int columnCount = metaData.getColumnCount();
+            for (int i = 1; i <= columnCount; i++) {
+                if (columnName.equalsIgnoreCase(metaData.getColumnName(i))) {
+                    String typeName = metaData.getColumnTypeName(i);
+                    return "hstore".equalsIgnoreCase(typeName);
+                }
+            }
+        } catch (SQLException e) {
+            // 忽略异常
+        }
+        return false;
+    }
+    
+    /**
+     * 检查是否为几何类型
+     */
+    private boolean isGeometricType(Class<?> fieldType) {
+        return fieldType == String.class || fieldType == double[].class;
+    }
+    
+    /**
+     * 检查是否为范围类型
+     */
+    private boolean isRangeType(Class<?> fieldType) {
+        return fieldType == String.class;
+    }
+    
+    /**
+     * 检查是否为全文搜索类型
+     */
+    private boolean isTextSearchType(Class<?> fieldType) {
+        return fieldType == String.class;
+    }
+    
+    /**
+     * 检查是否为网络类型
+     */
+    private boolean isNetworkType(Class<?> fieldType) {
+        return fieldType == String.class;
+    }
+    
+    /**
+     * 检查是否为位串类型
+     */
+    private boolean isBitStringType(Class<?> fieldType) {
+        return fieldType == String.class;
+    }
+    
+    /**
+     * 检查是否为XML类型
+     */
+    private boolean isXmlType(Class<?> fieldType) {
+        return fieldType == String.class;
+    }
+    
+    /**
      * 创建RowMapper实例的工厂方法
      */
+    /**
+     * 处理MySQL SET类型
+     */
+    private Set<String> handleMySQLSetType(ResultSet rs, String columnName) throws SQLException {
+        String setValue = rs.getString(columnName);
+        if (setValue == null || setValue.isEmpty()) {
+            return new HashSet<>();
+        }
+        
+        Set<String> result = new HashSet<>();
+        String[] values = setValue.split(",");
+        for (String value : values) {
+            result.add(value.trim());
+        }
+        return result;
+    }
+    
+    /**
+     * 处理MySQL BIT类型
+     */
+    private String handleMySQLBitType(ResultSet rs, String columnName) throws SQLException {
+        byte[] bitValue = rs.getBytes(columnName);
+        if (bitValue == null) {
+            return null;
+        }
+        
+        StringBuilder sb = new StringBuilder();
+        for (byte b : bitValue) {
+            sb.append(String.format("%8s", Integer.toBinaryString(b & 0xFF)).replace(' ', '0'));
+        }
+        return sb.toString();
+    }
+    
+    /**
+     * 检查是否为MySQL SET列
+     */
+    private boolean isMySQLSetColumn(ResultSet rs, String columnName) {
+        try {
+            ResultSetMetaData metaData = rs.getMetaData();
+            int columnCount = metaData.getColumnCount();
+            
+            for (int i = 1; i <= columnCount; i++) {
+                if (metaData.getColumnName(i).equalsIgnoreCase(columnName)) {
+                    String typeName = metaData.getColumnTypeName(i);
+                    return typeName != null && typeName.toUpperCase().startsWith("SET");
+                }
+            }
+        } catch (SQLException e) {
+            // 忽略异常，返回false
+        }
+        return false;
+    }
+    
+    /**
+     * 检查是否为MySQL BIT列
+     */
+    private boolean isMySQLBitColumn(ResultSet rs, String columnName) {
+        try {
+            ResultSetMetaData metaData = rs.getMetaData();
+            int columnCount = metaData.getColumnCount();
+            
+            for (int i = 1; i <= columnCount; i++) {
+                if (metaData.getColumnName(i).equalsIgnoreCase(columnName)) {
+                    String typeName = metaData.getColumnTypeName(i);
+                    return typeName != null && typeName.toUpperCase().equals("BIT");
+                }
+            }
+        } catch (SQLException e) {
+            // 忽略异常，返回false
+        }
+        return false;
+    }
+    
     public static <T> UniversalRowMapper<T> of(Class<T> entityClass, EntityMetadataRegistry metadataRegistry) {
         return new UniversalRowMapper<>(entityClass, metadataRegistry);
     }
