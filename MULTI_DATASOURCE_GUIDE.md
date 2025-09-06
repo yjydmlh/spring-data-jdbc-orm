@@ -294,10 +294,13 @@ public class UserService {
 
 ```java
 // 启用调试日志
+
+import io.flexdata.spring.orm.aspect.DataSourceAspect;
+
 logging:
-  level:
-    com.spring.jdbc.orm.aspect.DataSourceAspect: DEBUG
-    com.spring.jdbc.orm.core.datasource: DEBUG
+level:
+io.flexdata.spring.orm.aspect.DataSourceAspect:DEBUG
+com.spring.jdbc.orm.core.datasource:DEBUG
 ```
 
 ## 注意事项
