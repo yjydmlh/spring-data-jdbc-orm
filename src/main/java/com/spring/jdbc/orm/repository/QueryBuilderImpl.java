@@ -8,7 +8,7 @@ import com.spring.jdbc.orm.core.sql.SortDirection;
 import com.spring.jdbc.orm.core.sql.SqlGenerator;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.jdbc.core.BeanPropertyRowMapper;
+import com.spring.jdbc.orm.core.mapper.RowMapperFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 import java.util.*;
@@ -22,6 +22,7 @@ public class QueryBuilderImpl<T> implements QueryBuilder<T> {
     private final Class<T> entityClass;
     private final SqlGenerator sqlGenerator;
     private final NamedParameterJdbcTemplate jdbcTemplate;
+    private final RowMapperFactory rowMapperFactory;
 
     private List<String> selectedFields;
     private Criteria criteria;
@@ -33,11 +34,13 @@ public class QueryBuilderImpl<T> implements QueryBuilder<T> {
     private Criteria havingCriteria;
 
     public QueryBuilderImpl(GenericRepository<T, ?> repository, Class<T> entityClass,
-                            SqlGenerator sqlGenerator, NamedParameterJdbcTemplate jdbcTemplate) {
+                            SqlGenerator sqlGenerator, NamedParameterJdbcTemplate jdbcTemplate,
+                            RowMapperFactory rowMapperFactory) {
         this.repository = repository;
         this.entityClass = entityClass;
         this.sqlGenerator = sqlGenerator;
         this.jdbcTemplate = jdbcTemplate;
+        this.rowMapperFactory = rowMapperFactory;
     }
 
     @Override
@@ -99,7 +102,7 @@ public class QueryBuilderImpl<T> implements QueryBuilder<T> {
         String sql = buildSql();
         Map<String, Object> params = buildParameters();
 
-        return jdbcTemplate.query(sql, params, new BeanPropertyRowMapper<>(entityClass));
+        return jdbcTemplate.query(sql, params, rowMapperFactory.getRowMapper(entityClass));
     }
 
     @Override

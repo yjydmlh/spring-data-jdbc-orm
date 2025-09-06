@@ -1,5 +1,6 @@
 package com.spring.jdbc.orm.config;
 
+import com.spring.jdbc.orm.core.mapper.RowMapperFactory;
 import com.spring.jdbc.orm.core.metadata.EntityMetadataRegistry;
 import com.spring.jdbc.orm.core.sql.SqlGenerator;
 import com.spring.jdbc.orm.template.OrmTemplate;
@@ -40,8 +41,9 @@ public class OrmAutoConfiguration {
     @ConditionalOnBean(NamedParameterJdbcTemplate.class)
     public OrmTemplate ormTemplate(EntityMetadataRegistry metadataRegistry,
                                    SqlGenerator sqlGenerator,
-                                   NamedParameterJdbcTemplate jdbcTemplate) {
-        return new OrmTemplate(metadataRegistry, sqlGenerator, jdbcTemplate);
+                                   NamedParameterJdbcTemplate jdbcTemplate,
+                                   RowMapperFactory rowMapperFactory) {
+        return new OrmTemplate(metadataRegistry, sqlGenerator, jdbcTemplate, rowMapperFactory);
     }
 
     @Bean
@@ -49,7 +51,8 @@ public class OrmAutoConfiguration {
     @ConditionalOnBean(NamedParameterJdbcTemplate.class)
     public TypeSafeOrmTemplate typeSafeOrmTemplate(EntityMetadataRegistry metadataRegistry,
                                                    SqlGenerator sqlGenerator,
-                                                   NamedParameterJdbcTemplate jdbcTemplate) {
-        return new TypeSafeOrmTemplate(metadataRegistry, sqlGenerator, jdbcTemplate);
+                                                   NamedParameterJdbcTemplate jdbcTemplate,
+                                                   RowMapperFactory rowMapperFactory) {
+        return new TypeSafeOrmTemplate(metadataRegistry, sqlGenerator, jdbcTemplate, rowMapperFactory);
     }
 }

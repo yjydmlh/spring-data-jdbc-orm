@@ -11,7 +11,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.jdbc.core.BeanPropertyRowMapper;
+import com.spring.jdbc.orm.core.mapper.RowMapperFactory;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -28,15 +28,18 @@ public class TypeSafeRepositoryImpl<T, ID> implements TypeSafeRepository<T, ID> 
     private final NamedParameterJdbcTemplate jdbcTemplate;
     private final SqlGenerator sqlGenerator;
     private final EntityMetadataRegistry metadataRegistry;
+    private final RowMapperFactory rowMapperFactory;
     private final Class<T> entityClass;
 
     public TypeSafeRepositoryImpl(NamedParameterJdbcTemplate jdbcTemplate,
                                   SqlGenerator sqlGenerator,
                                   EntityMetadataRegistry metadataRegistry,
+                                  RowMapperFactory rowMapperFactory,
                                   Class<T> entityClass) {
         this.jdbcTemplate = jdbcTemplate;
         this.sqlGenerator = sqlGenerator;
         this.metadataRegistry = metadataRegistry;
+        this.rowMapperFactory = rowMapperFactory;
         this.entityClass = entityClass;
     }
 
@@ -109,7 +112,7 @@ public class TypeSafeRepositoryImpl<T, ID> implements TypeSafeRepository<T, ID> 
         String sql = sqlGenerator.generateSelect(entityClass, convertCriteria(criteria), null, null, null, null);
         Map<String, Object> params = criteria != null ? criteria.getParameters() : new HashMap<>();
 
-        return jdbcTemplate.query(sql, params, new BeanPropertyRowMapper<>(entityClass));
+        return jdbcTemplate.query(sql, params, rowMapperFactory.getRowMapper(entityClass));
     }
 
     @Override
@@ -122,7 +125,7 @@ public class TypeSafeRepositoryImpl<T, ID> implements TypeSafeRepository<T, ID> 
                 pageable.getPageSize(), (int) pageable.getOffset());
         Map<String, Object> params = criteria != null ? criteria.getParameters() : new HashMap<>();
 
-        List<T> content = jdbcTemplate.query(sql, params, new BeanPropertyRowMapper<>(entityClass));
+        List<T> content = jdbcTemplate.query(sql, params, rowMapperFactory.getRowMapper(entityClass));
 
         return new PageImpl<>(content, pageable, total);
     }

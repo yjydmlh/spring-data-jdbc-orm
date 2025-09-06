@@ -1,0 +1,5 @@
+# Spring Boot Auto Configuration
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+com.spring.jdbc.orm.config.OrmAutoConfiguration,\
+com.spring.jdbc.orm.config.RowMapperAutoConfiguration,\
+com.spring.jdbc.orm.config.TypeSafeOrmAutoConfiguration

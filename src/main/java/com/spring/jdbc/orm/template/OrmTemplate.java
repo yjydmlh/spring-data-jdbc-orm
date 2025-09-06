@@ -2,6 +2,7 @@ package com.spring.jdbc.orm.template;
 
 import com.spring.jdbc.orm.core.interfaces.Criteria;
 import com.spring.jdbc.orm.core.interfaces.GenericRepository;
+import com.spring.jdbc.orm.core.mapper.RowMapperFactory;
 import com.spring.jdbc.orm.core.metadata.EntityMetadataRegistry;
 import com.spring.jdbc.orm.core.sql.SqlGenerator;
 import com.spring.jdbc.orm.repository.impl.GenericRepositoryImpl;
@@ -22,20 +23,23 @@ public class OrmTemplate {
     private final EntityMetadataRegistry metadataRegistry;
     private final SqlGenerator sqlGenerator;
     private final NamedParameterJdbcTemplate jdbcTemplate;
+    private final RowMapperFactory rowMapperFactory;
     private final Map<Class<?>, GenericRepository<?, ?>> repositoryCache = new ConcurrentHashMap<>();
 
     public OrmTemplate(EntityMetadataRegistry metadataRegistry,
                        SqlGenerator sqlGenerator,
-                       NamedParameterJdbcTemplate jdbcTemplate) {
+                       NamedParameterJdbcTemplate jdbcTemplate,
+                       RowMapperFactory rowMapperFactory) {
         this.metadataRegistry = metadataRegistry;
         this.sqlGenerator = sqlGenerator;
         this.jdbcTemplate = jdbcTemplate;
+        this.rowMapperFactory = rowMapperFactory;
     }
 
     @SuppressWarnings("unchecked")
     public <T, ID> GenericRepository<T, ID> getRepository(Class<T> entityClass) {
         return (GenericRepository<T, ID>) repositoryCache.computeIfAbsent(entityClass,
-                clazz -> new GenericRepositoryImpl<>(jdbcTemplate, sqlGenerator, metadataRegistry, clazz));
+                clazz -> new GenericRepositoryImpl<>(jdbcTemplate, sqlGenerator, metadataRegistry, rowMapperFactory, clazz));
     }
 
     // 便捷方法

@@ -11,7 +11,7 @@ import com.spring.jdbc.orm.core.util.FieldUtils;
 import com.spring.jdbc.orm.core.util.SFunction;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.jdbc.core.BeanPropertyRowMapper;
+import com.spring.jdbc.orm.core.mapper.RowMapperFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 import java.util.*;
@@ -25,6 +25,7 @@ public class TypeSafeQueryBuilderImpl<T> implements TypeSafeQueryBuilder<T> {
     private final SqlGenerator sqlGenerator;
     private final NamedParameterJdbcTemplate jdbcTemplate;
     private final EntityMetadataRegistry metadataRegistry;
+    private final RowMapperFactory rowMapperFactory;
 
     private List<String> selectedFields;
     private TypeSafeCriteria<T> criteria;
@@ -37,11 +38,13 @@ public class TypeSafeQueryBuilderImpl<T> implements TypeSafeQueryBuilder<T> {
     public TypeSafeQueryBuilderImpl(Class<T> entityClass,
                                     SqlGenerator sqlGenerator,
                                     NamedParameterJdbcTemplate jdbcTemplate,
-                                    EntityMetadataRegistry metadataRegistry) {
+                                    EntityMetadataRegistry metadataRegistry,
+                                    RowMapperFactory rowMapperFactory) {
         this.entityClass = entityClass;
         this.sqlGenerator = sqlGenerator;
         this.jdbcTemplate = jdbcTemplate;
         this.metadataRegistry = metadataRegistry;
+        this.rowMapperFactory = rowMapperFactory;
     }
 
     @Override
@@ -106,7 +109,7 @@ public class TypeSafeQueryBuilderImpl<T> implements TypeSafeQueryBuilder<T> {
         String sql = buildSql();
         Map<String, Object> params = buildParameters();
 
-        return jdbcTemplate.query(sql, params, new BeanPropertyRowMapper<>(entityClass));
+        return jdbcTemplate.query(sql, params, rowMapperFactory.getRowMapper(entityClass));
     }
 
     @Override
