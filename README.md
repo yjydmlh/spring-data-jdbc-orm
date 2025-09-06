@@ -92,14 +92,7 @@ public List<User> findActiveUsers() {
 - **CTE（公共表表达式）** - 支持递归查询和复杂子查询
 - **批量操作** - 高性能批量插入、更新、删除
 
-详细使用方法请参考：[高级查询功能指南](ADVANCED_QUERY_GUIDE.md)
-
 ## 📖 完整文档
-
-### 核心功能
-- [快速开始指南](docs/getting-started.md)
-- [配置参考手册](docs/configuration-reference.md)
-- [类型安全查询指南](docs/type-safe-query-guide.md)
 
 ### 多数据源
 - [多数据源完整指南](docs/multi-datasource-complete-guide.md)
@@ -108,10 +101,6 @@ public List<User> findActiveUsers() {
 ### 数据库支持
 - [数据库兼容性指南](docs/database-compatibility.md)
 - [通用RowMapper使用指南](docs/rowmapper-guide.md)
-
-### 高级功能
-- [高级查询功能指南](docs/advanced-query-guide.md)
-- [性能优化指南](docs/performance-guide.md)
 
 ## 🧪 测试
 
