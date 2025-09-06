@@ -1,0 +1,188 @@
+# 增强多数据源配置示例
+# 本配置文件展示了如何配置任意多个数据源
+
+spring:
+  # 主数据源配置
+  datasource:
+    url: jdbc:mysql://localhost:3306/main_db
+    username: root
+    password: password
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    
+  # JPA配置
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+
+# 自定义多数据源配置
+multi-datasource:
+  # 启用增强多数据源功能
+  enhanced:
+    enabled: true
+    # 健康检查配置
+    health-check:
+      enabled: true
+      timeout: 5000
+      interval: 30000
+    
+  # 只读数据源配置
+  read-only:
+    url: jdbc:mysql://localhost:3306/readonly_db
+    username: readonly_user
+    password: readonly_password
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    
+  # 额外数据源配置
+  additional:
+    # 用户数据库
+    user_db:
+      url: jdbc:mysql://localhost:3306/user_db
+      username: user_admin
+      password: user_password
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      
+    # 订单数据库
+    order_db:
+      url: jdbc:mysql://localhost:3306/order_db
+      username: order_admin
+      password: order_password
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      
+    # 分析数据库
+    analytics_db:
+      url: jdbc:mysql://localhost:3306/analytics_db
+      username: analytics_user
+      password: analytics_password
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      
+    # 备份数据库
+    backup_db:
+      url: jdbc:mysql://backup-server:3306/backup_db
+      username: backup_user
+      password: backup_password
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      
+    # 归档数据库
+    archive_db:
+      url: jdbc:mysql://archive-server:3306/archive_db
+      username: archive_user
+      password: archive_password
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      
+    # 遗留系统数据库
+    legacy_db:
+      url: jdbc:oracle:thin:@legacy-server:1521:LEGACY
+      username: legacy_user
+      password: legacy_password
+      driver-class-name: oracle.jdbc.OracleDriver
+      
+    # 测试数据库
+    test_db:
+      url: jdbc:h2:mem:testdb
+      username: sa
+      password: 
+      driver-class-name: org.h2.Driver
+      
+    # 缓存数据库（Redis作为数据源的示例）
+    cache_db:
+      url: jdbc:redis://localhost:6379/0
+      username: 
+      password: redis_password
+      driver-class-name: com.redis.jdbc.RedisDriver
+      
+    # 时序数据库（InfluxDB示例）
+    timeseries_db:
+      url: jdbc:influxdb://localhost:8086/metrics
+      username: influx_user
+      password: influx_password
+      driver-class-name: com.influxdb.jdbc.InfluxDBDriver
+
+# 数据源路由配置
+datasource:
+  routing:
+    # 默认数据源
+    default: main
+    # 数据源别名映射
+    aliases:
+      primary: main
+      secondary: readonly
+      users: user_db
+      orders: order_db
+      reports: analytics_db
+      
+# 表名映射配置
+table:
+  mapping:
+    # 逻辑表名到物理表名的映射
+    user: user_2024
+    order: order_current
+    product: product_active
+    # 支持环境相关的表名
+    log: "log_#{spring.profiles.active}"
+    
+# 分片配置示例
+sharding:
+  # 用户表分片配置
+  user:
+    # 分片策略：按用户ID取模
+    strategy: mod
+    # 分片数量
+    count: 4
+    # 表名模板
+    table-template: "user_shard_{}"
+    # 数据源分布
+    datasource-mapping:
+      0: user_db
+      1: user_db
+      2: backup_db
+      3: backup_db
+      
+  # 订单表分片配置
+  order:
+    # 分片策略：按时间范围
+    strategy: time_range
+    # 表名模板
+    table-template: "order_{}"
+    # 时间范围配置
+    time-ranges:
+      - start: "2024-01-01"
+        end: "2024-03-31"
+        suffix: "2024_q1"
+        datasource: order_db
+      - start: "2024-04-01"
+        end: "2024-06-30"
+        suffix: "2024_q2"
+        datasource: order_db
+      - start: "2024-07-01"
+        end: "2024-09-30"
+        suffix: "2024_q3"
+        datasource: archive_db
+      - start: "2024-10-01"
+        end: "2024-12-31"
+        suffix: "2024_q4"
+        datasource: archive_db
+
+# 监控配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,datasource
+  endpoint:
+    health:
+      show-details: always
+    datasource:
+      enabled: true
+      
+# 日志配置
+logging:
+  level:
+    com.spring.jdbc.orm: DEBUG
+    org.springframework.jdbc: DEBUG
+    # SQL日志
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE

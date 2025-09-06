@@ -21,6 +21,7 @@
 - 🔥 **窗口函数** - ROW_NUMBER、RANK、LAG、LEAD等分析函数
 - 🔥 **条件构建** - 支持复杂的WHERE条件组合和动态查询
 - 🔥 **分页排序** - 内置分页支持和多字段排序
+- 🔥 **多数据源** - 动态数据源切换、读写分离、注解驱动
 
 ### 数据库兼容性
 - 🗄️ **MySQL** - 完全支持，包括JSON、空间数据类型
@@ -133,6 +134,170 @@ public class UserService {
 
 ## 📚 高级功能
 
+### 多数据源支持
+
+框架支持动态多数据源切换，实现读写分离、数据库分片等企业级特性：
+
+```java
+// 注解驱动的数据源切换
+@Service
+public class UserService {
+    
+    // 从只读库查询
+    @DataSource(type = DataSource.Type.READONLY)
+    public List<User> getUsers() {
+        return userRepository.findAll();
+    }
+    
+    // 保存到主库
+    @DataSource(type = DataSource.Type.MASTER)
+    @Transactional
+    public User saveUser(User user) {
+        return userRepository.save(user);
+    }
+    
+    // 编程式数据源切换
+    public List<User> getUsersFromSpecificDB() {
+        return DataSourceContext.executeWithDataSource("analytics", () -> {
+            return userRepository.findAll();
+        });
+    }
+}
+```
+
+### 手动指定库名和表名
+
+框架完全支持开发者手动指定数据源（库名）和表名，提供灵活的数据路由能力：
+
+#### 手动指定数据源（库名）
+
+```java
+@Service
+public class ManualRoutingService {
+    
+    // 方式1：executeWithDataSource（推荐）
+    public List<Map<String, Object>> getDataFromSpecificDB(String dbName) {
+        return DataSourceContext.executeWithDataSource(dbName, () -> {
+            return repository.findAll("SELECT * FROM users WHERE active = 1");
+        });
+    }
+    
+    // 方式2：手动设置和清理
+    public void processDataInSpecificDB(String dbName) {
+        DataSourceContext.setCurrentDataSource(dbName);
+        try {
+            // 执行数据库操作
+            List<Map<String, Object>> data = repository.findAll("SELECT * FROM orders");
+            processData(data);
+        } finally {
+            DataSourceContext.clearDataSource(); // 必须清理
+        }
+    }
+}
+```
+
+#### 手动指定表名
+
+```java
+@Service
+public class TableRoutingService {
+    
+    // 单表映射
+    public List<Map<String, Object>> getDataFromSpecificTable(String tableName) {
+        return TableContext.executeWithTableMapping("users", tableName, () -> {
+            return repository.findAll("SELECT * FROM users");
+        });
+    }
+    
+    // 批量表映射
+    public List<Map<String, Object>> getComplexData() {
+        Map<String, String> mappings = new HashMap<>();
+        mappings.put("users", "users_2024");
+        mappings.put("orders", "orders_2024");
+        
+        return TableContext.executeWithTableMappings(mappings, () -> {
+            return repository.findAll(
+                "SELECT u.name, COUNT(o.id) as order_count " +
+                "FROM users u LEFT JOIN orders o ON u.id = o.user_id " +
+                "GROUP BY u.id"
+            );
+        });
+    }
+    
+    // 注解方式指定表名
+    @Table("users_vip")
+    public List<Map<String, Object>> getVipUsers() {
+        return repository.findAll("SELECT * FROM users WHERE vip_level >= 3");
+    }
+}
+```
+
+#### 组合使用 - 同时指定数据源和表名
+
+```java
+// 分片路由示例
+public Map<String, Object> getUserFromShard(Long userId) {
+    int shardIndex = (int) (userId % 4);
+    String targetDB = "shard_" + shardIndex;     // 手动指定分片库
+    String targetTable = "users_" + shardIndex;  // 手动指定分片表
+    
+    return DataSourceContext.executeWithDataSource(targetDB, () -> {
+        return TableContext.executeWithTableMapping("users", targetTable, () -> {
+            return repository.findOne("SELECT * FROM users WHERE id = ?", userId);
+        });
+    });
+}
+
+// 多租户路由示例
+public List<Map<String, Object>> getTenantData(String tenantId) {
+    String tenantDB = "tenant_" + tenantId;      // 手动指定租户库
+    String tenantTable = "data_" + tenantId;     // 手动指定租户表
+    
+    return DataSourceContext.executeWithDataSource(tenantDB, () -> {
+        return TableContext.executeWithTableMapping("tenant_data", tenantTable, () -> {
+            return repository.findAll("SELECT * FROM tenant_data WHERE active = 1");
+        });
+    });
+}
+```
+
+**多数据源配置**：
+```yaml
+spring:
+  datasource:
+    primary:
+      url: jdbc:mysql://localhost:3306/main_db
+      username: root
+      password: password
+    readonly:
+      url: jdbc:mysql://localhost:3307/readonly_db
+      username: readonly_user
+      password: readonly_pass
+    secondary:
+      url: jdbc:postgresql://localhost:5432/analytics_db
+      username: postgres
+      password: postgres
+    # 支持任意数量的数据源
+    shard_0:
+      url: jdbc:mysql://localhost:3306/shard_0
+      username: shard_user
+      password: shard_pass
+    tenant_001:
+      url: jdbc:mysql://localhost:3306/tenant_001
+      username: tenant_user
+      password: tenant_pass
+```
+
+**核心特性**：
+- ✅ **完全支持手动指定** - 数据源和表名都可以手动指定
+- ✅ **多种指定方式** - 注解、编程式API、配置映射
+- ✅ **线程安全** - 基于ThreadLocal实现，多线程环境安全
+- ✅ **自动清理** - 作用域结束自动清理资源
+- ✅ **组合使用** - 数据源和表名可以同时指定
+- ✅ **SQL自动替换** - 自动替换SQL中的逻辑表名为物理表名
+
+详细配置和使用方法请参考：[多数据源多表切换完整指南](MULTI_DATASOURCE_TABLE_GUIDE.md)
+
 ### 窗口函数查询
 
 ```java
@@ -226,6 +391,7 @@ spring:
 ## 📖 文档
 
 - [通用RowMapper使用指南](ROWMAPPER_GUIDE.md)
+- [多数据源配置指南](MULTI_DATASOURCE_GUIDE.md)
 - [MySQL数据类型支持](docs/MySQL_DataTypes_Support.md)
 - [PostgreSQL数据类型支持](docs/PostgreSQL_DataTypes_Support.md)
 

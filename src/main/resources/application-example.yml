@@ -1,0 +1,226 @@
+# 多数据源配置示例
+# 将此文件重命名为 application.yml 或根据环境创建对应的配置文件
+
+spring:
+  datasource:
+    # 主数据源配置
+    main:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://localhost:3306/main_db?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
+      username: root
+      password: password
+      hikari:
+        maximum-pool-size: 20
+        minimum-idle: 5
+        connection-timeout: 30000
+        idle-timeout: 600000
+        max-lifetime: 1800000
+        pool-name: MainHikariCP
+    
+    # 分析数据库配置
+    analytics:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://localhost:3306/analytics_db?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
+      username: analytics_user
+      password: analytics_pass
+      hikari:
+        maximum-pool-size: 10
+        minimum-idle: 2
+        connection-timeout: 30000
+        idle-timeout: 600000
+        max-lifetime: 1800000
+        pool-name: AnalyticsHikariCP
+    
+    # 备份数据库配置
+    backup:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://backup-server:3306/backup_db?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
+      username: backup_user
+      password: backup_pass
+      hikari:
+        maximum-pool-size: 5
+        minimum-idle: 1
+        connection-timeout: 30000
+        idle-timeout: 600000
+        max-lifetime: 1800000
+        pool-name: BackupHikariCP
+    
+    # 分片数据源配置
+    shard0:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://shard0-server:3306/shard0_db?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
+      username: shard_user
+      password: shard_pass
+      hikari:
+        maximum-pool-size: 15
+        minimum-idle: 3
+        connection-timeout: 30000
+        idle-timeout: 600000
+        max-lifetime: 1800000
+        pool-name: Shard0HikariCP
+    
+    shard1:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://shard1-server:3306/shard1_db?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
+      username: shard_user
+      password: shard_pass
+      hikari:
+        maximum-pool-size: 15
+        minimum-idle: 3
+        connection-timeout: 30000
+        idle-timeout: 600000
+        max-lifetime: 1800000
+        pool-name: Shard1HikariCP
+    
+    shard2:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://shard2-server:3306/shard2_db?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
+      username: shard_user
+      password: shard_pass
+      hikari:
+        maximum-pool-size: 15
+        minimum-idle: 3
+        connection-timeout: 30000
+        idle-timeout: 600000
+        max-lifetime: 1800000
+        pool-name: Shard2HikariCP
+    
+    shard3:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://shard3-server:3306/shard3_db?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
+      username: shard_user
+      password: shard_pass
+      hikari:
+        maximum-pool-size: 15
+        minimum-idle: 3
+        connection-timeout: 30000
+        idle-timeout: 600000
+        max-lifetime: 1800000
+        pool-name: Shard3HikariCP
+    
+    # 读写分离配置
+    master:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://master-server:3306/main_db?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
+      username: master_user
+      password: master_pass
+      hikari:
+        maximum-pool-size: 20
+        minimum-idle: 5
+        connection-timeout: 30000
+        idle-timeout: 600000
+        max-lifetime: 1800000
+        pool-name: MasterHikariCP
+    
+    slave:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://slave-server:3306/main_db?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
+      username: slave_user
+      password: slave_pass
+      hikari:
+        maximum-pool-size: 15
+        minimum-idle: 3
+        connection-timeout: 30000
+        idle-timeout: 600000
+        max-lifetime: 1800000
+        pool-name: SlaveHikariCP
+    
+    # 遗留系统数据源
+    legacy:
+      driver-class-name: oracle.jdbc.OracleDriver
+      url: jdbc:oracle:thin:@legacy-server:1521:LEGACY
+      username: legacy_user
+      password: legacy_pass
+      hikari:
+        maximum-pool-size: 5
+        minimum-idle: 1
+        connection-timeout: 30000
+        idle-timeout: 600000
+        max-lifetime: 1800000
+        pool-name: LegacyHikariCP
+    
+    # 新系统数据源
+    new-system:
+      driver-class-name: org.postgresql.Driver
+      url: jdbc:postgresql://new-server:5432/new_system_db
+      username: new_user
+      password: new_pass
+      hikari:
+        maximum-pool-size: 20
+        minimum-idle: 5
+        connection-timeout: 30000
+        idle-timeout: 600000
+        max-lifetime: 1800000
+        pool-name: NewSystemHikariCP
+    
+    # 多租户数据源示例
+    tenant-a:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://tenant-server:3306/tenant_a_db?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
+      username: tenant_a_user
+      password: tenant_a_pass
+      hikari:
+        maximum-pool-size: 10
+        minimum-idle: 2
+        connection-timeout: 30000
+        idle-timeout: 600000
+        max-lifetime: 1800000
+        pool-name: TenantAHikariCP
+    
+    tenant-b:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://tenant-server:3306/tenant_b_db?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
+      username: tenant_b_user
+      password: tenant_b_pass
+      hikari:
+        maximum-pool-size: 10
+        minimum-idle: 2
+        connection-timeout: 30000
+        idle-timeout: 600000
+        max-lifetime: 1800000
+        pool-name: TenantBHikariCP
+
+# 日志配置
+logging:
+  level:
+    com.spring.jdbc.orm: DEBUG
+    org.springframework.jdbc: DEBUG
+    com.zaxxer.hikari: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# 应用配置
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,datasource
+  endpoint:
+    health:
+      show-details: always
+
+# 自定义配置
+app:
+  datasource:
+    # 数据源健康检查配置
+    health-check:
+      enabled: true
+      interval: 30000
+    # 连接池监控配置
+    monitoring:
+      enabled: true
+      log-slow-queries: true
+      slow-query-threshold: 1000
+    # 分片配置
+    sharding:
+      enabled: true
+      shard-count: 4
+      shard-key: user_id
+    # 多租户配置
+    multi-tenant:
+      enabled: true
+      tenant-resolver: header # header, subdomain, database
+      default-tenant: default
