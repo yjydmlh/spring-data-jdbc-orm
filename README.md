@@ -114,7 +114,7 @@ mvn test -Dtest=ComplexSqlTest
 
 ## 🤝 贡献
 
-欢迎提交Issue和Pull Request来帮助改进这个项目！详细贡献指南请参考 [CONTRIBUTING.md](CONTRIBUTING.md)。
+欢迎提交Issue和Pull Request来帮助改进这个项目！
 
 ## 📄 许可证
 
