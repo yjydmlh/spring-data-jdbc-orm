@@ -70,7 +70,7 @@ public List<User> findActiveUsers() {
 }
 ```
 
-详细查询示例请参考：[类型安全查询指南](TYPE_SAFE_QUERY_GUIDE.md)
+
 
 ## 📚 高级功能
 
@@ -78,13 +78,13 @@ public List<User> findActiveUsers() {
 
 框架支持动态多数据源切换，实现读写分离、数据库分片等企业级特性。
 
-详细配置和使用方法请参考：[多数据源配置指南](MULTI_DATASOURCE_GUIDE.md)
+
 
 ### 手动指定库名和表名
 
 框架完全支持开发者手动指定数据源（库名）和表名，提供灵活的数据路由能力。
 
-详细配置和使用方法请参考：[多数据源多表切换完整指南](MULTI_DATASOURCE_TABLE_GUIDE.md)
+
 
 ### 高级查询功能
 
